@@ -7,46 +7,84 @@ from pymongo import MongoClient
 
 # MongoDB setup
 client = MongoClient("mongodb+srv://shoon9525:WmOMn1vTg65pnXID@cluster0.iaom9xh.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-db = client["NBA_DB"]  # Create or use existing database
-collection = db["2023"]  # Create or use existing collection
+db = client["NBA2023"]  # Create or use existing database
+collection = db["please"]  # Create or use existing collection
 
 st.set_page_config(layout="wide")
-st.title('NBA Player Stats Explorer from MongoDB')
+st.title('NBA Player Stats Explorer for 2023')
 
-st.sidebar.header('User Input Features')
-selected_year = st.sidebar.selectbox('Year', list(reversed(range(1950,2020))))
+def load_data():
+    results = collection.find({})
+    # Convert each document into a DataFrame row
+    all_data = pd.DataFrame(list(results))  # Convert the cursor to a list and then create a DataFrame
+    return all_data
 
-@st.cache
-def load_data(year):
-    query = {"Year": year}
-    results = collection.find(query)
-    df = pd.DataFrame(list(results))
-    return df
+playerstats = load_data()
 
-playerstats = load_data(selected_year)
+if not playerstats.empty:
+    # Sidebar - Team selection
+    sorted_unique_team = sorted(playerstats['TEAM'].unique())
+    selected_team = st.sidebar.multiselect('Team', sorted_unique_team, sorted_unique_team)
 
-# Sidebar - Team selection
-sorted_unique_team = sorted(playerstats['Tm'].unique())
-selected_team = st.sidebar.multiselect('Team', sorted_unique_team, sorted_unique_team)
+    # Sidebar - Position selection
 
-# Sidebar - Position selection
-unique_pos = ['C','PF','SF','PG','SG']
-selected_pos = st.sidebar.multiselect('Position', unique_pos, unique_pos)
+    unique_pos = ['C', 'F', 'G']
+    selected_pos = st.sidebar.multiselect('Position', unique_pos, unique_pos)
 
-# Filtering data
-df_selected_team = playerstats[(playerstats['Tm'].isin(selected_team)) & (playerstats['Pos'].isin(selected_pos))]
+    # Adding sliders for statistical filters
+    min_age, max_age = int(playerstats['AGE'].min()), int(playerstats['AGE'].max())
+    age_slider = st.sidebar.slider("Filter by Age", min_age, max_age, (min_age, max_age))
 
-st.header('Display Player Stats of Selected Team(s)')
-st.write('Data Dimension: ' + str(df_selected_team.shape[0]) + ' rows and ' + str(df_selected_team.shape[1]) + ' columns.')
-st.dataframe(df_selected_team)
+    min_ppg, max_ppg = float(playerstats['PPG'].min()), float(playerstats['PPG'].max())
+    ppg_slider = st.sidebar.slider("Filter by Points Per Game", min_ppg, max_ppg, (min_ppg, max_ppg))
 
-# Download function
-def filedownload(df):
-    csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
-    href = f'<a href="data:file/csv;base64,{b64}" download="playerstats.csv">Download CSV File</a>'
-    return href
+    min_rpg, max_rpg = float(playerstats['RPG'].min()), float(playerstats['RPG'].max())
+    rpg_slider = st.sidebar.slider("Filter by Rebounds Per Game", min_rpg, max_rpg, (min_rpg, max_rpg))
 
-st.markdown(filedownload(df_selected_team), unsafe_allow_html=True)
+    min_apg, max_apg = float(playerstats['APG'].min()), float(playerstats['APG'].max())
+    apg_slider = st.sidebar.slider("Filter by Assists Per Game", min_apg, max_apg, (min_apg, max_apg))
 
-# Heatmap and bar chart logic remains the same
+    # Applying the filters
+    filtered_data = playerstats[
+        (playerstats['TEAM'].isin(selected_team)) & 
+        (playerstats['POS'].isin(selected_pos)) & 
+        (playerstats['AGE'].between(*age_slider)) &
+        (playerstats['PPG'].between(*ppg_slider)) &
+        (playerstats['RPG'].between(*rpg_slider)) &
+        (playerstats['APG'].between(*apg_slider))
+    ]
+
+    st.header('Display Player Stats of Selected Team(s) and Filters')
+    st.write('Data Dimension: {} rows and {} columns.'.format(filtered_data.shape[0], filtered_data.shape[1]))
+    st.dataframe(filtered_data)
+else:
+    st.error("No player stats available. Check the MongoDB data.")
+
+    # Form for new data entry
+with st.form("player_input"):
+    st.write("## Enter new player data")
+    name = st.text_input("Player Name", "LeBron James")
+    team = st.text_input("Team", "LAL")
+    pos = st.text_input("Position", "F")
+    age = st.number_input("Age", min_value=18, max_value=40, value=30)
+    ppg = st.number_input("Points Per Game", min_value=0.0, max_value=50.0, value=25.0)
+    rpg = st.number_input("Rebounds Per Game", min_value=0.0, max_value=20.0, value=7.0)
+    apg = st.number_input("Assists Per Game", min_value=0.0, max_value=20.0, value=7.0)
+    submit_button = st.form_submit_button("Submit")
+
+# Inserting new data to MongoDB
+if submit_button:
+    new_data = {
+        "_id": name,
+        "TEAM": team,
+        "POS": pos,
+        "AGE": age,
+        "PPG": ppg,
+        "RPG": rpg,
+        "APG": apg
+    }
+    try:
+        collection.insert_one(new_data)
+        st.success("Player data inserted successfully!")
+    except Exception as e:
+        st.error(f"Error inserting data: {e}")
