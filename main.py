@@ -67,7 +67,7 @@ if not playerstats.empty:
     # Advanced stats sliders and non-slider fields
     if source == 'Advanced Stats':
         # Fields without sliders
-        non_slider_fields = ['NAME']
+        non_slider_fields = ['NAME', 'TEAM', 'POS']
         # Fields with sliders
         advanced_stats = ['eFG%', 'TS%', 'USG%', 'TO%', 'P+R', 'P+A', 'P+R+A', 'VI', 'ORtg', 'DRtg']
         
