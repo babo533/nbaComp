@@ -29,7 +29,7 @@ def load_data_mongo():
 
 def load_data_spark():
     # Load and return as PySpark DataFrame, not converting to Pandas
-    df = spark.read.csv("/Users/hoon/Desktop/streamLit/part-00000-1126c397-bc9b-435a-9de9-555548b6bef6-c000.csv", header=True, inferSchema=True).dropDuplicates(['NAME'])
+    df = spark.read.csv("part-00000-1126c397-bc9b-435a-9de9-555548b6bef6-c000.csv", header=True, inferSchema=True).dropDuplicates(['NAME'])
     return df  # Return Spark DataFrame
 
 playerstats_spark = load_data_spark()  # Load or initialize your Spark DataFrame here
@@ -112,7 +112,7 @@ def handle_player_data(source):
         handle_advanced_data(spark, playerstats_spark)
 
 
-def handle_advanced_data(spark, playerstats_spark, csv_path = "/Users/hoon/Desktop/streamLit/part-00000-1126c397-bc9b-435a-9de9-555548b6bef6-c000.csv"):
+def handle_advanced_data(spark, playerstats_spark, csv_path = "part-00000-1126c397-bc9b-435a-9de9-555548b6bef6-c000.csv"):
     form_key = "add_player_to_spark"
     with st.form(form_key):
         # Input fields for player data
@@ -285,7 +285,7 @@ def basic_filters(playerstats):
 
 source = st.radio("Select Stat Type", ('Basic Stats', 'Advanced Stats'))
 
-path = "/Users/hoon/Desktop/streamLit/part-00000-1126c397-bc9b-435a-9de9-555548b6bef6-c000.csv"
+path = "part-00000-1126c397-bc9b-435a-9de9-555548b6bef6-c000.csv"
 
 if source == 'Basic Stats':
     playerstats = load_data_mongo()
